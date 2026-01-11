@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2025 妙妙屋年度报告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Orbitron:wght@700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- 基础设置 --- */
+        html, body {
+            height: 100%; margin: 0;
+            font-family: 'ZCOOL KuaiLe', cursive, sans-serif;
+            background-color: #0f172a; color: #fff;
+            overscroll-behavior: none;
+        }
+
+        /* 主滚动容器 */
+        #main-scroller {
+            height: 100%; overflow-y: scroll;
+            scroll-snap-type: y mandatory; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; opacity: 1;
+        }
+
+        .snap-section {
+            height: 100vh; width: 100%;
+            scroll-snap-align: start; scroll-snap-stop: always;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* 字体 */
+        .font-art { font-family: 'Ma Shan Zheng', cursive; }
+        .font-digit { font-family: 'Orbitron', sans-serif; }
+        .font-body { font-family: 'Noto Sans SC', sans-serif; }
+
+        /* 动画背景 */
+        .aurora-bg {
+            position: fixed; inset: 0; z-index: -2;
+            background: linear-gradient(45deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+        }
+        .aurora-blob {
+            position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(20px, -30px) scale(1.1); }
+        }
+
+        /* 通用组件 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .scroll-reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease; }
+        .active .scroll-reveal { opacity: 1; transform: translateY(0); }
+        .neon-text { text-shadow: 0 0 10px rgba(255,255,255,0.5), 0 0 20px #d946ef; }
+
+        /* 全屏切换按钮 */
+        #fullscreen-toggle {
+            position: fixed; top: 20px; right: 20px; z-index: 4500;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+            color: white; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(5px);
+        }
+        #fullscreen-toggle:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
+
+        /* 模态框通用样式 */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+            transition: opacity 0.3s ease; opacity: 0; pointer-events: none;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-box {
+            background: linear-gradient(145deg, #1e1b4b, #0f172a);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px; max-width: 500px; width: 100%;
+            padding: 24px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-height: 80vh; display: flex; flex-direction: column;
+        }
+        .modal-overlay.show .modal-box { transform: scale(1); }
+    </style>
+</head>
+<body>
+
+    <!-- 常驻全屏切换按钮 -->
+    <div id="fullscreen-toggle" onclick="toggleFullScreen()" title="全屏模式">
+        <i class="fas fa-expand"></i>
+    </div>
+
+    <!-- 公告弹窗 -->
+    <div id="announcement-modal" class="modal-overlay">
+        <div class="modal-box">
+            <button onclick="closeModal('announcement-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            <div class="text-center mb-6 shrink-0">
+                <div class="text-4xl mb-2">📢</div>
+                <h3 class="text-2xl font-bold font-art text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-purple-300" id="ann-title">更新公告</h3>
+                <p class="text-xs text-gray-500 mt-1" id="ann-date">DATE</p>
+            </div>
+            <div class="text-gray-300 text-sm leading-relaxed space-y-2 font-body overflow-y-auto" id="ann-body">
+                <!-- 公告内容 -->
+            </div>
+            <button onclick="closeModal('announcement-modal')" class="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-white transition border border-white/10 shrink-0">我知道了</button>
+        </div>
+    </div>
+
+    <!-- 背景元素 -->
+    <div class="aurora-bg">
+        <div class="aurora-blob bg-purple-900 w-96 h-96 top-0 left-0"></div>
+        <div class="aurora-blob bg-blue-900 w-96 h-96 bottom-0 right-0" style="animation-delay: -5s"></div>
+    </div>
+    <canvas id="confetti-canvas" class="fixed top-0 left-0 w-full h-full pointer-events-none z-50"></canvas>
+
+    <!-- 主展示区域 -->
+    <div id="main-scroller">
+        <!-- 头部 -->
+        <header id="header-section" class="snap-section items-center justify-center text-center px-4 relative">
+            <div id="header-bg" class="absolute inset-0 bg-cover bg-center opacity-20" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc8372c84.jpg');"></div>
+            <div class="relative z-10 scroll-reveal active">
+                <h2 class="text-xl md:text-3xl font-bold text-cyan-300 tracking-widest mb-2" id="header-subtitle">MEMORIES</h2>
+                <h1 class="text-[5rem] md:text-[10rem] font-black font-digit text-transparent bg-clip-text bg-gradient-to-b from-white to-yellow-500 leading-none drop-shadow-xl" id="header-year">2025</h1>
+                <h3 class="text-3xl md:text-6xl font-art neon-text mt-4" id="header-title">妙妙屋年度报告</h3>
+            </div>
+            <div id="scroll-hint" class="absolute bottom-10 w-full text-center animate-bounce">
+                <p class="text-white/50 text-sm">上滑继续浏览</p>
+                <i class="fas fa-chevron-down mt-2 text-white/50"></i>
+            </div>
+        </header>
+
+        <!-- 全屏图片展示1-->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc85a6376.png');"></div>
+        </section>
+
+        <!-- 全屏图片展示2-->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963eac1d1caa.jpg');"></div>
+        </section>
+
+        <!-- 全屏图片展示3 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc85d84e2.png');"></div>
+        </section>
+
+        <!-- 全屏图片展示4 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc85ef9a4.png');"></div>
+        </section>
+
+        <!-- 过渡页 -->
+        <section class="snap-section items-center justify-center px-6 text-center">
+            <div class="glass-card p-8 md:p-16 rounded-3xl max-w-3xl scroll-reveal">
+                <i class="fas fa-quote-left text-3xl text-yellow-500 mb-6 block"></i>
+                <h2 class="text-2xl md:text-4xl font-art leading-relaxed mb-6" id="transition-title">团队榜单结束之后<br>让我们将视野转向个人榜单</h2>
+                <div class="mt-8 text-yellow-300 font-bold text-xl animate-pulse">究竟谁是毛分大王<br>👇</div>
+                 <div id="header-bg" class="absolute inset-0 bg-cover bg-center opacity-20" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963e9c539c0f.jpg');"></div>
+            </div>
+        </section>
+
+        <!-- 全屏图片展示5 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc93a2b01.png');"></div>
+        </section>
+
+        <!-- 全屏图片展示6 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc9614b80.png');"></div>
+        </section>
+
+        <!-- 全屏图片展示7 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc9704a01.png');"></div>
+        </section>
+
+        <!-- 全屏图片展示8 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc9765998.png');"></div>
+        </section>
+
+        <!-- 全屏图片展示9 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dc97b1e91.png');"></div>
+        </section>
+
+        <!-- 过渡页 -->
+        <section class="snap-section items-center justify-center px-6 text-center">
+            <div class="glass-card p-8 md:p-16 rounded-3xl max-w-3xl scroll-reveal">
+                <i class="fas fa-quote-left text-3xl text-yellow-500 mb-6 block"></i>
+                <h2 class="text-2xl md:text-4xl font-art leading-relaxed mb-6" id="transition-title">谁尽力谁犯罪<br>谁的打法不团队</h2>
+                <div class="mt-8 text-yellow-300 font-bold text-xl animate-pulse">究竟谁是掉刀大王<br>👇</div>
+                 <div id="header-bg" class="absolute inset-0 bg-cover bg-center opacity-20" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963e9460c8ff.jpg');"></div>
+            </div>
+        </section>
+
+        <!-- 全屏图片展示10 -->
+        <section class="snap-section items-center justify-center p-0 text-center relative h-screen w-full">
+            <div class="absolute inset-0 bg-cover bg-center opacity-100" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dcda4af37.png');"></div>
+        </section>
+
+        <!-- 过渡页 -->
+        <section class="snap-section items-center justify-center px-6 text-center">
+            <div class="glass-card p-8 md:p-16 rounded-3xl max-w-3xl scroll-reveal">
+                <i class="fas fa-quote-left text-3xl text-yellow-500 mb-6 block"></i>
+                <h2 class="text-2xl md:text-4xl font-art leading-relaxed mb-6" id="transition-title">没有找到你的名字？<br>不用担心最后迎来的是</h2>
+                <div class="mt-8 text-yellow-300 font-bold text-3xl animate-pulse">妙妙屋从夯到拉排行<br>👇</div>
+                 <div id="header-bg" class="absolute inset-0 bg-cover bg-center opacity-20" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963deb11e555.jpg');"></div>
+            </div>
+        </section>
+
+
+       <!-- 85%高度图片展示 -->
+<section class="snap-section flex items-center justify-center p-0 text-center relative">
+    <div class="h-[85vh] w-full bg-cover bg-center" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963dcdabaa8f.png');"></div>
+</section>
+
+       <!-- 100%高度图片展示 -->
+<section class="snap-section flex items-center justify-center p-0 text-center relative">
+    <div class="h-[100vh] w-full bg-cover bg-center" style="background-image: url('https://youke3.picui.cn/s1/2026/01/12/6963f1f0ad58a.png');"></div>
+</section>
+
+        <!-- 尾页 -->
+        <footer id="footer-section" class="snap-section items-center justify-center text-center relative bg-black">
+            <div class="absolute inset-0 bg-gradient-to-t from-purple-900/50 to-transparent"></div>
+            <div class="z-10 scroll-reveal">
+                <div class="text-6xl mb-6">✨</div>
+                <h2 class="text-4xl md:text-6xl font-art mb-4" id="footer-text">2026 期待你崭新的战犯表现</h2>
+                <button onclick="fireConfetti()" class="px-8 py-3 bg-yellow-400 text-black font-bold rounded-full hover:scale-110 transition shadow-[0_0_20px_#facc15]">再庆祝一次! 🎉</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- 核心数据 (State) ---
+        // 默认数据模板
+        const appData = {
+            config: {
+                year: '2025',
+                mainTitle: '妙妙屋年度报告',
+                footerText: '2026 期待你崭新的战犯表现',
+                coverImage: 'https://youke3.picui.cn/s1/2026/01/12/6963dc85f0de4.png'
+            }
+        };
+
+        // --- 全屏切换逻辑 ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`无法进入全屏: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // --- 应用逻辑 ---
+        function startApp() {
+            renderAll();
+            fireConfetti();
+        }
+
+        function renderAll() {
+            document.getElementById('header-year').innerText = appData.config.year;
+            document.getElementById('header-title').innerText = appData.config.mainTitle;
+            document.getElementById('footer-text').innerText = appData.config.footerText;
+
+            // 更新封面背景
+            if (appData.config.coverImage) {
+                document.getElementById('header-bg').style.backgroundImage = `url('${appData.config.coverImage}')`;
+            }
+
+            initScrollObserver();
+        }
+
+        function initScrollObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        if (entry.target.id === 'footer-section') startFireworks();
+                    } else {
+                        if (entry.target.id === 'footer-section') stopFireworks();
+                    }
+                });
+            }, { threshold: 0.15, root: document.getElementById('main-scroller') });
+            document.querySelectorAll('.snap-section').forEach(el => observer.observe(el));
+        }
+
+        function initConfetti() {
+            const c = document.getElementById('confetti-canvas');
+            c.width = window.innerWidth; c.height = window.innerHeight;
+            myConfetti = confetti.create(c, { resize: true });
+        }
+        let myConfetti;
+        let fwInterval;
+        function fireConfetti() { if(myConfetti) myConfetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } }); }
+
+        function startFireworks() {
+            if (fwInterval) return;
+            fireBurst(); fwInterval = setInterval(fireBurst, 1500);
+        }
+        function fireBurst() {
+            const randomInRange = (min, max) => Math.random() * (max - min) + min;
+            confetti({ particleCount: 80, spread: 360, startVelocity: 30, origin: { x: randomInRange(0.2, 0.8), y: randomInRange(0.2, 0.5) }, colors: ['#FFD700', '#FF69B4', '#00FFFF', '#FF4500'], zIndex: 100 });
+        }
+        function stopFireworks() { if (fwInterval) { clearInterval(fwInterval); fwInterval = null; } }
+
+        function checkAnnouncement() {
+            fetch('./announcement.json')
+                .then(response => {
+                    if (!response.ok) throw new Error("No announcement");
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.content) {
+                        document.getElementById('ann-title').innerText = data.title || "公告";
+                        document.getElementById('ann-date').innerText = data.date || "";
+                        const listHtml = Array.isArray(data.content)
+                            ? data.content.map(line => `<p>• ${line}</p>`).join('')
+                            : `<p>${data.content}</p>`;
+                        document.getElementById('ann-body').innerHTML = listHtml;
+                        setTimeout(() => document.getElementById('announcement-modal').classList.add('show'), 1000);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 页面加载后直接开始展示
+            startApp();
+            checkAnnouncement();
+        });
+    </script>
+</body>
+</html>
